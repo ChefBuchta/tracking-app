@@ -14,6 +14,7 @@ export const AddFood = () => {
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState("snack");
+  const [grams, setGrams] = useState(100); // Default grams to 100
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -52,7 +53,7 @@ export const AddFood = () => {
 
   const handleAddFood = async (food: FoodItem) => {
     try {
-      const entry = await apiService.addFoodToDiary(food, selectedMealType, 1);
+      const entry = await apiService.addFoodToDiary(food, selectedMealType, grams);
       if (entry) {
         toast({
           title: "Food Added",
@@ -129,6 +130,18 @@ export const AddFood = () => {
             </Button>
           ))}
         </div>
+      </Card>
+
+      {/* Grams Input */}
+      <Card className="p-4">
+        <h2 className="font-semibold mb-3">Grams</h2>
+        <Input
+          type="number"
+          min={1}
+          value={grams}
+          onChange={e => setGrams(Number(e.target.value))}
+          placeholder="Grams"
+        />
       </Card>
 
       {/* Search Results */}
