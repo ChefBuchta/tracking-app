@@ -312,14 +312,14 @@ def add_diary_entry(food_id: str, meal_type: str, quantity: float, date: str = N
         "quantity": quantity,
         "date": date,
         "created_at": datetime.now().isoformat(),
-        # Calculate nutrition based on quantity
-        "calories": round(food["calories"] * quantity, 1),
-        "protein": round(food["protein"] * quantity, 1),
-        "fat": round(food["fat"] * quantity, 1),
-        "carbs": round(food["carbs"] * quantity, 1),
-        "fiber": round(food.get("fiber", 0) * quantity, 1),
-        "sugar": round(food.get("sugar", 0) * quantity, 1),
-        "sodium": round(food.get("sodium", 0) * quantity, 1),
+        # Calculate nutrition based on quantity (FIXED)
+        "calories": round(food["calories"] * quantity / 100, 1),
+        "protein": round(food["protein"] * quantity / 100, 1),
+        "fat": round(food["fat"] * quantity / 100, 1),
+        "carbs": round(food["carbs"] * quantity / 100, 1),
+        "fiber": round(food.get("fiber", 0) * quantity / 100, 1),
+        "sugar": round(food.get("sugar", 0) * quantity / 100, 1),
+        "sodium": round(food.get("sodium", 0) * quantity / 100, 1),
     }
     
     diary_entries.append(entry)
