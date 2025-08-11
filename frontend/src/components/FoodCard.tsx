@@ -45,15 +45,15 @@ export const FoodCard = ({
     <Card className="p-4">
       <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-sm">{name}</h3>
+          <div className="flex flex-col items-center gap-1 mb-1">
+            <h3 className="font-medium text-sm text-center">{name}</h3>
             {mealType && (
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getMealTypeColor(mealType)}`}>
                 {mealType}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground">
             <span>{calories} kcal</span>
             {quantity !== 1 && (
               <span>• {quantity}x</span>
@@ -84,16 +84,16 @@ export const FoodCard = ({
         )}
       </div>
       
-      <div className="grid grid-cols-3 gap-4 text-xs">
-        <div className="text-center">
+      <div className="grid grid-cols-3 gap-4 text-xs text-center">
+        <div>
           <div className="text-muted-foreground">Protein</div>
           <div className="font-medium">{protein.toFixed(1)}g</div>
         </div>
-        <div className="text-center">
+        <div>
           <div className="text-muted-foreground">Fat</div>
           <div className="font-medium">{fat.toFixed(1)}g</div>
         </div>
-        <div className="text-center">
+        <div>
           <div className="text-muted-foreground">Carbs</div>
           <div className="font-medium">{carbs.toFixed(1)}g</div>
         </div>

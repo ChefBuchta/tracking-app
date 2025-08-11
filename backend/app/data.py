@@ -9,6 +9,8 @@ foods = [
         "fiber": 4.4,
         "sugar": 19.0,
         "sodium": 1.0,
+        "serving_size": 100,
+        "serving_unit": "g",
         "vitamin_a": 3.0,
         "vitamin_c": 8.4,
         "vitamin_d": 0.0,

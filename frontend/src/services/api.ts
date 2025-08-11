@@ -11,6 +11,8 @@ export interface FoodItem {
   fiber?: number;
   sugar?: number;
   sodium?: number;
+  serving_size?: number; // e.g., 100 for 100g or 1 for 1 item
+  serving_unit?: string; // e.g., "g" or "item"
   // Micronutrients
   vitamin_a?: number;
   vitamin_c?: number;
