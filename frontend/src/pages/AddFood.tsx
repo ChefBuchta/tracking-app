@@ -51,9 +51,10 @@ export const AddFood = () => {
     }
   };
 
-  const handleAddFood = async (food: FoodItem) => {
+  const handleAddFood = async (food: FoodItem, grams: number) => {
     try {
-      const entry = await apiService.addFoodToDiary(food, selectedMealType, grams);
+      const quantity = grams / 100; // Convert grams to quantity multiplier assuming per 100g nutrition
+      const entry = await apiService.addFoodToDiary(food, selectedMealType, quantity);
       if (entry) {
         toast({
           title: "Food Added",
@@ -130,6 +131,16 @@ export const AddFood = () => {
             </Button>
           ))}
         </div>
+        {/* Grams Input */}
+        <div className="flex gap-2 mt-4">
+        <Input
+          type="number"
+          min={1}
+          value={grams}
+          onChange={e => setGrams(Number(e.target.value))}
+          placeholder="Grams"
+        />
+        </div>
       </Card>
 
       {/* Grams Input */}
@@ -153,7 +164,7 @@ export const AddFood = () => {
               <FoodCard 
                 key={food.id} 
                 {...food}
-                onAdd={() => handleAddFood(food)}
+                onAdd={() => handleAddFood(food, grams)}
                 showActions={true}
               />
             ))}
@@ -169,7 +180,7 @@ export const AddFood = () => {
             <FoodCard 
               key={food.id} 
               {...food}
-              onAdd={() => handleAddFood(food)}
+              onAdd={() => handleAddFood(food, grams)}
               showActions={true}
             />
           ))}
