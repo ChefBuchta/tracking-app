@@ -8,11 +8,13 @@ from app.database import (
     init_database, get_user_stats, update_user_stats, 
     save_diary_entry, get_diary_entries, delete_diary_entry, get_daily_summary
 )
+from app.routes import food
 
 # Initialize database on startup
 init_database()
 
 app = FastAPI()
+app.include_router(food.router, prefix="/api")
 allowed_origins = [
     "http://localhost:8080",
     "http://localhost:5173",  # Vite default port
@@ -68,19 +70,17 @@ def get_foods(q: str = Query(None, description="Search query")):
     else:
         result = foods
     return {"foods": result}
-
+@app.get("/foods/recent")
+def get_recent_foods():
+    # For now, return the first 5 foods as "recent"
+    # Later this will be based on user's actual recent usage
+    return {"foods": foods[:5]}
 @app.get("/foods/{food_id}")
 def get_food_by_id_endpoint(food_id: str):
     food = get_food_by_id(food_id)
     if food is None:
         raise HTTPException(status_code=404, detail="Food not found")
     return {"food": food}
-
-@app.get("/foods/recent")
-def get_recent_foods():
-    # For now, return the first 5 foods as "recent"
-    # Later this will be based on user's actual recent usage
-    return {"foods": foods[:5]}
 
 # User stats endpoints
 @app.get("/user/stats")

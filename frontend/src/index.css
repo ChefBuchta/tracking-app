@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 /* Health & Nutrition App Design System - Clean, modern, health-focused */
 
@@ -117,9 +117,6 @@
     --progress-bg: 217.2 32.6% 17.5%;
     --progress-fill: 142 76% 55%;
   }
-}
-
-@layer base {
   * {
     @apply border-border;
   }

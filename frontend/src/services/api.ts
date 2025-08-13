@@ -170,23 +170,17 @@ class ApiService {
   }
 
   async searchFood(query: string): Promise<FoodItem[]> {
-    try {
-      const response = await this.fetchWithErrorHandling(
-        `${API_BASE_URL}/foods?q=${encodeURIComponent(query)}`
-      );
-      if (response.foods) {
-        return response.foods;
-      } else if (Array.isArray(response)) {
-        return response;
-      } else if (response.food) {
-        return [response.food];
-      }
-      return [];
-    } catch (error) {
-      console.error('Error searching food:', error);
-      return this.getMockFoodData(query);
-    }
+  try {
+    const response = await this.fetchWithErrorHandling(
+      `${API_BASE_URL}/api/search?query=${encodeURIComponent(query)}`
+    );
+    return Array.isArray(response) ? response : [];
+  } catch (error) {
+    console.error('Error searching food:', error);
+    return this.getMockFoodData(query);
   }
+}
+
 
   async getFoodById(foodId: string): Promise<FoodItem | null> {
     try {
@@ -257,9 +251,21 @@ class ApiService {
     );
   }
 
+  async getFoodByBarcode(code: string): Promise<FoodItem | null> {
+  try {
+    const response = await this.fetchWithErrorHandling(
+      `${API_BASE_URL}/api/barcode/${encodeURIComponent(code)}`
+    );
+    return response || null;
+  } catch (error) {
+    console.error('Error fetching food by barcode:', error);
+    return null;
+  }
+}
+
   async getRecentFoods(): Promise<FoodItem[]> {
     try {
-      const response = await this.fetchWithErrorHandling(`${API_BASE_URL}/foods/recent`);
+      const response = await this.fetchWithErrorHandling(`${API_BASE_URL}/api/foods/recent`);
       return response.foods || [];
     } catch (error) {
       console.error('Error fetching recent foods:', error);
@@ -378,3 +384,15 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+
+export async function searchFoods(query: string) {
+  const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error('Failed to fetch');
+  return res.json();
+}
+
+export async function getFoodByBarcode(code: string) {
+  const res = await fetch(`/api/barcode/${encodeURIComponent(code)}`);
+  if (!res.ok) throw new Error('Failed to fetch');
+  return res.json();
+}

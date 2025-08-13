@@ -5,16 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, Search, Loader2, Plus, Minus } from "lucide-react";
+import { ArrowLeft, Search, Loader2, Plus, Minus, ScanLine } from "lucide-react";
 import { FoodCard } from "@/components/FoodCard";
 import { useToast } from "@/hooks/use-toast";
 import { apiService, type FoodItem } from "@/services/api";
+import BarcodeScanner from "@/components/BarcodeScanner"; // You'll create this
 
 export const AddFood = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState("snack");
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [quantityType, setQuantityType] = useState<'grams' | 'units'>('grams');
@@ -37,7 +39,6 @@ export const AddFood = () => {
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) return;
-    
     setIsSearching(true);
     try {
       const foods = await apiService.searchFood(searchTerm);
@@ -53,19 +54,38 @@ export const AddFood = () => {
     }
   };
 
+  const handleBarcodeDetected = async (code: string) => {
+    try {
+      const food = await apiService.getFoodByBarcode(code);
+      if (food) {
+        setSelectedFood(food);
+        setIsScanning(false);
+      } else {
+        toast({
+          title: "Not Found",
+          description: "No product found for this barcode.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Scan Error",
+        description: "Failed to fetch product for barcode.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAddFood = async () => {
     if (!selectedFood) return;
-    
     try {
       let quantity: number;
-      
       if (quantityType === 'units' && selectedFood.serving_unit === 'item') {
         quantity = unitCount;
       } else {
         const gramValue = parseInt(grams) || 0;
         quantity = Math.max(1, gramValue) / (selectedFood.serving_size || 100);
       }
-      
       const entry = await apiService.addFoodToDiary(selectedFood, selectedMealType, quantity);
       if (entry) {
         toast({
@@ -85,11 +105,9 @@ export const AddFood = () => {
 
   const handleFoodSelect = (food: FoodItem) => {
     setSelectedFood(food);
-    
-    // Smart defaults based on food type
     if (food.serving_unit === 'item' && food.name.toLowerCase().includes('banana')) {
       setQuantityType('units');
-      setGrams("118"); // Average banana weight
+      setGrams("118");
       setUnitCount(1);
     } else if (food.serving_unit === 'item') {
       setQuantityType('units');
@@ -102,7 +120,6 @@ export const AddFood = () => {
   };
 
   const handleGramsChange = (value: string) => {
-    // Allow empty string or numbers only
     if (value === "" || /^\d+$/.test(value)) {
       setGrams(value);
     }
@@ -118,17 +135,16 @@ export const AddFood = () => {
   return (
     <div className="max-w-md mx-auto p-4 space-y-6 bg-gradient-to-b from-background to-muted/20 min-h-screen">
       {/* Header */}
-      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 py-2">
+      <div className="flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-10 py-2">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           <ArrowLeft size={20} />
         </Button>
-        <h1 className="text-2xl font-bold text-black text-center w-full">
-          Add Food
-        </h1>
+        <h1 className="text-2xl font-bold text-black text-center w-full">Add Food</h1>
       </div>
 
-      {/* Search Section */}
-      <Card className="p-4 border-2 border-border/50 shadow-lg">
+      {/* Search + Scan Section */}
+      <Card className="p-4 border-2 border-border/50 shadow-lg space-y-4">
+        {/* Search Box */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Input
@@ -136,28 +152,41 @@ export const AddFood = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-10 bg-background/50 backdrop-blur-sm border-2 focus:border-primary/50 transition-colors"
+              className="pl-10"
             />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
           </div>
-          <Button 
-            onClick={handleSearch} 
-            disabled={isSearching}
-            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-          >
+          <Button onClick={handleSearch} disabled={isSearching}>
             {isSearching ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Searching...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Searching...
               </>
             ) : (
               "Search"
             )}
           </Button>
         </div>
+
+        <div className="flex items-center justify-center">
+          <span className="text-muted-foreground text-sm">OR</span>
+        </div>
+
+        {/* Barcode Scanner */}
+        {!isScanning ? (
+          <Button variant="outline" onClick={() => setIsScanning(true)}>
+            <ScanLine className="mr-2 h-4 w-4" /> Scan Barcode
+          </Button>
+        ) : (
+          <div>
+            <BarcodeScanner onDetected={handleBarcodeDetected} />
+            <Button variant="ghost" size="sm" onClick={() => setIsScanning(false)} className="mt-2">
+              Stop Scanning
+            </Button>
+          </div>
+        )}
       </Card>
 
-      {/* Selected Food Details */}
+       {/* Selected Food Details */}
       {selectedFood && (
         <Card className="p-6 border-2 border-primary/20 shadow-xl bg-gradient-to-br from-card to-card/80">
           <div className="flex items-center justify-between mb-4">
