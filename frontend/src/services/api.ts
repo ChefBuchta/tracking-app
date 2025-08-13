@@ -1,4 +1,6 @@
-// API service for backend integration
+import { normalizeFood } from './normalizefood';
+// API service for backend 
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export interface FoodItem {
@@ -174,12 +176,13 @@ class ApiService {
     const response = await this.fetchWithErrorHandling(
       `${API_BASE_URL}/api/search?query=${encodeURIComponent(query)}`
     );
-    return Array.isArray(response) ? response : [];
+    if (!Array.isArray(response)) return [];
+    return response.map(normalizeFood); // <-- normalize each food
   } catch (error) {
     console.error('Error searching food:', error);
-    return this.getMockFoodData(query);
+    return this.getMockFoodData(query).map(normalizeFood);
+    }
   }
-}
 
 
   async getFoodById(foodId: string): Promise<FoodItem | null> {
@@ -381,6 +384,7 @@ class ApiService {
       return null;
     }
   }
+  
 }
 
 export const apiService = new ApiService();
