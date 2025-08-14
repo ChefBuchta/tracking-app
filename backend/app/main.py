@@ -6,15 +6,17 @@ from typing import Optional
 from app.data import foods, get_food_by_id
 from app.database import (
     init_database, get_user_stats, update_user_stats, 
-    save_diary_entry, get_diary_entries, delete_diary_entry, get_daily_summary
+     get_diary_entries, delete_diary_entry, get_daily_summary
 )
-from app.routes import food
+from app.routes import food, diary
 
 # Initialize database on startup
 init_database()
 
 app = FastAPI()
 app.include_router(food.router, prefix="/api")
+app.include_router(diary.router, prefix="/diary")
+
 allowed_origins = [
     "http://localhost:8080",
     "http://localhost:5173",  # Vite default port
@@ -103,57 +105,6 @@ def get_todays_diary():
     """Get today's diary entries"""
     entries = get_diary_entries()
     return {"entries": entries}
-
-@app.post("/diary/add")
-def add_food_to_diary(entry: DiaryEntryCreate):
-    """Add a food item to the diary"""
-    food = get_food_by_id(entry.food_id)
-    if not food:
-        raise HTTPException(status_code=404, detail="Food not found")
-    
-    from datetime import datetime
-    
-    if entry.date is None:
-        entry.date = datetime.now().strftime("%Y-%m-%d")
-    
-    # Calculate nutrition based on quantity
-    entry_data = {
-        "food_id": entry.food_id,
-        "food_name": food["name"],
-        "meal_type": entry.meal_type,
-        "quantity": entry.quantity,
-        "date": entry.date,
-        "calories": round(food["calories"] * entry.quantity, 1),
-        "protein": round(food["protein"] * entry.quantity, 1),
-        "fat": round(food["fat"] * entry.quantity, 1),
-        "carbs": round(food["carbs"] * entry.quantity, 1),
-        "fiber": round(food.get("fiber", 0) * entry.quantity, 1),
-        "sugar": round(food.get("sugar", 0) * entry.quantity, 1),
-        "sodium": round(food.get("sodium", 0) * entry.quantity, 1),
-        "vitamin_a": round(food.get("vitamin_a", 0) * entry.quantity, 1),
-        "vitamin_c": round(food.get("vitamin_c", 0) * entry.quantity, 1),
-        "vitamin_d": round(food.get("vitamin_d", 0) * entry.quantity, 1),
-        "vitamin_e": round(food.get("vitamin_e", 0) * entry.quantity, 1),
-        "vitamin_k": round(food.get("vitamin_k", 0) * entry.quantity, 1),
-        "vitamin_b1": round(food.get("vitamin_b1", 0) * entry.quantity, 1),
-        "vitamin_b2": round(food.get("vitamin_b2", 0) * entry.quantity, 1),
-        "vitamin_b3": round(food.get("vitamin_b3", 0) * entry.quantity, 1),
-        "vitamin_b6": round(food.get("vitamin_b6", 0) * entry.quantity, 1),
-        "vitamin_b12": round(food.get("vitamin_b12", 0) * entry.quantity, 1),
-        "folate": round(food.get("folate", 0) * entry.quantity, 1),
-        "calcium": round(food.get("calcium", 0) * entry.quantity, 1),
-        "iron": round(food.get("iron", 0) * entry.quantity, 1),
-        "magnesium": round(food.get("magnesium", 0) * entry.quantity, 1),
-        "phosphorus": round(food.get("phosphorus", 0) * entry.quantity, 1),
-        "potassium": round(food.get("potassium", 0) * entry.quantity, 1),
-        "zinc": round(food.get("zinc", 0) * entry.quantity, 1),
-    }
-    
-    entry_id = save_diary_entry(entry_data)
-    entry_data["id"] = entry_id
-    entry_data["created_at"] = datetime.now().isoformat()
-    
-    return {"entry": entry_data, "message": "Food added to diary successfully"}
 
 @app.delete("/diary/{entry_id}")
 def remove_diary_entry_endpoint(entry_id: int):

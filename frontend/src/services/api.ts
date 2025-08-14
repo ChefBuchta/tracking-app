@@ -283,6 +283,10 @@ class ApiService {
       
       const response = await this.fetchWithErrorHandling(`${API_BASE_URL}/diary/add`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
         body: JSON.stringify({
           food_id: food.id,
           meal_type: mealType,
