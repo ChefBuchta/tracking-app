@@ -1,6 +1,5 @@
-#This is food.py
-#This file contains routes for searching food
-from fastapi import APIRouter, Query
+# food.py
+from fastapi import APIRouter, Query, HTTPException
 import requests
 import os
 from dotenv import load_dotenv
@@ -12,34 +11,41 @@ router = APIRouter()
 NUTRITIONIX_APP_ID = os.getenv("NUTRITIONIX_APP_ID")
 NUTRITIONIX_API_KEY = os.getenv("NUTRITIONIX_API_KEY")
 
+BASE_HEADERS = {
+    "x-app-id": NUTRITIONIX_APP_ID,
+    "x-app-key": NUTRITIONIX_API_KEY,
+    "x-remote-user-id": "0",
+    "Content-Type": "application/json"
+}
+
+NUTRITIONIX_URL = "https://trackapi.nutritionix.com/v2/natural/nutrients"
+
 @router.get("/search")
 def search_food(query: str = Query(..., min_length=1)):
-    url = "https://trackapi.nutritionix.com/v2/search/instant"
-    headers = {
-        "x-app-id": NUTRITIONIX_APP_ID,
-        "x-app-key": NUTRITIONIX_API_KEY
-    }
-    params = {"query": query}
+    body = {"query": query}
+    r = requests.post(NUTRITIONIX_URL, headers=BASE_HEADERS, json=body)
     
-    r = requests.get(url, headers=headers, params=params)
-    if r.status_code == 200:
-        data = r.json()
-        results = []
-        
-        for item in data.get("common", []):
-            food_nutrition = item.get("nutrition", {})
-            results.append({
-                "id": item.get("food_name"),
-                "name": item.get("food_name").title(),
-                "photo": item.get("photo", {}).get("thumb"),
-                "calories": food_nutrition.get("calories", 0),
-                "protein": food_nutrition.get("protein", 0),
-                "fat": food_nutrition.get("fat", 0),
-                "carbs": food_nutrition.get("carbs", 0),
-                "fiber": food_nutrition.get("fiber", 0),
-                "sugar": food_nutrition.get("sugar", 0),
-                "sodium": food_nutrition.get("sodium", 0),
-            })
-        return results
+    if r.status_code != 200:
+        raise HTTPException(status_code=500, detail="Nutritionix API error")
     
-    return {"error": "Failed to fetch data"}
+    data = r.json()
+    if not data.get("foods"):
+        return []
+
+    # Map each food to your response format
+    results = []
+    for food_data in data["foods"]:
+        results.append({
+            "id": food_data.get("food_name", "").lower().replace(" ", "_"),
+            "name": food_data.get("food_name"),
+            "photo": food_data.get("photo", {}).get("thumb", ""),
+            "calories": food_data.get("nf_calories", 0),
+            "protein": food_data.get("nf_protein", 0),
+            "fat": food_data.get("nf_total_fat", 0),
+            "carbs": food_data.get("nf_total_carbohydrate", 0),
+            "fiber": food_data.get("nf_dietary_fiber", 0),
+            "sugar": food_data.get("nf_sugars", 0),
+            "sodium": food_data.get("nf_sodium", 0)
+        })
+    
+    return results
