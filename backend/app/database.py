@@ -174,7 +174,7 @@ def save_diary_entry(entry_data):
     """Save a diary entry to database"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+    print(entry_data)
     cursor.execute('''
         INSERT INTO diary_entries (
             food_id, food_name, meal_type, quantity, date,

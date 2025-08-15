@@ -1,3 +1,5 @@
+// This is AddFood.tsx
+// This component allows users to add food items to their diary
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";

@@ -1,3 +1,6 @@
+# This is main.py
+# This file's purpose is to define the main application and its routes
+
 from fastapi import FastAPI, middleware, Query, HTTPException
 from fastapi.middleware import cors
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +19,7 @@ init_database()
 app = FastAPI()
 app.include_router(food.router, prefix="/api")
 app.include_router(diary.router, prefix="/diary")
-
+print(app.routes)
 allowed_origins = [
     "http://localhost:8080",
     "http://localhost:5173",  # Vite default port
@@ -72,7 +75,7 @@ def get_foods(q: str = Query(None, description="Search query")):
     else:
         result = foods
     return {"foods": result}
-@app.get("/foods/recent")
+@app.get("/api/foods/recent")
 def get_recent_foods():
     # For now, return the first 5 foods as "recent"
     # Later this will be based on user's actual recent usage

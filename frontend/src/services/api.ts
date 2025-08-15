@@ -1,3 +1,5 @@
+// This is api.ts
+// The purpose of this file is to define the API service for the frontend
 import { normalizeFood } from './normalizefood';
 // API service for backend 
 
