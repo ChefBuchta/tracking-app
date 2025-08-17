@@ -1,3 +1,5 @@
+#This is diary.py
+#This file contains the API routes for the food diary
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
@@ -5,7 +7,7 @@ import requests
 import os
 from typing import Optional
 from dotenv import load_dotenv
-
+from routes.nutrionix import get_nutrition
 load_dotenv()
 
 router = APIRouter()
@@ -25,6 +27,8 @@ class DiaryEntryCreate(BaseModel):
     food_name: Optional[str] = None
     meal_type: str
     quantity: float
+    unit_type: Optional[str] = "grams"
+    serving_size: Optional[float] = None
     date: Optional[str] = None
     calories: Optional[float] = None
     protein: Optional[float] = None
@@ -52,65 +56,43 @@ class DiaryEntryCreate(BaseModel):
     zinc: Optional[float] = None
 
 # ----------------- Nutritionix Fetch -----------------
-def get_nutrition(food_name: str, quantity: float = 1):
-    """
-    Fetch nutrition info from Nutritionix for a given food name and quantity.
-    Returns a dict with calories, protein, fat, carbs, etc., or None if not found.
-    """
-    url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
-    body = {"query": f"{quantity} {food_name}"}
-
-    try:
-        r = requests.post(url, headers=BASE_HEADERS, json=body)
-        r.raise_for_status()
-        data = r.json()
-        if not data.get("foods"):
-            print(f"No foods found for query: {food_name}")
-            return None
-        food_data = data["foods"][0]
-
-        return {
-            "calories": food_data.get("nf_calories", 0),
-            "protein": food_data.get("nf_protein", 0),
-            "fat": food_data.get("nf_total_fat", 0),
-            "carbs": food_data.get("nf_total_carbohydrate", 0),
-            "fiber": food_data.get("nf_dietary_fiber", 0),
-            "sugar": food_data.get("nf_sugars", 0),
-            "sodium": food_data.get("nf_sodium", 0),
-            "vitamin_a": food_data.get("nf_vitamin_a_dv", 0),
-            "vitamin_c": food_data.get("nf_vitamin_c_dv", 0),
-            "vitamin_d": food_data.get("nf_vitamin_d_dv", 0),
-            "vitamin_e": food_data.get("nf_vitamin_e_dv", 0),
-            "vitamin_k": food_data.get("nf_vitamin_k_dv", 0),
-            "vitamin_b1": food_data.get("nf_thiamin_b1_dv", 0),
-            "vitamin_b2": food_data.get("nf_riboflavin_b2_dv", 0),
-            "vitamin_b3": food_data.get("nf_niacin_b3_dv", 0),
-            "vitamin_b6": food_data.get("nf_vitamin_b6_dv", 0),
-            "vitamin_b12": food_data.get("nf_vitamin_b12_dv", 0),
-            "folate": food_data.get("nf_folate_dv", 0),
-            "calcium": food_data.get("nf_calcium_dv", 0),
-            "iron": food_data.get("nf_iron_dv", 0),
-            "magnesium": food_data.get("nf_magnesium_dv", 0),
-            "phosphorus": food_data.get("nf_phosphorus_dv", 0),
-            "potassium": food_data.get("nf_potassium_dv", 0),
-            "zinc": food_data.get("nf_zinc_dv", 0),
-        }
-    except Exception as e:
-        print(f"Error fetching nutrition: {e}")
-        return None
 
 # ----------------- Add Food Route -----------------
 @router.post("/add")
 def add_food_to_diary(entry: DiaryEntryCreate):
-    # If calories are missing, fetch nutrition info
-    if entry.calories is None and entry.food_name:
-        nutrients = get_nutrition(entry.food_name, entry.quantity)
-        if not nutrients:
-            raise HTTPException(status_code=404, detail="Food not found or nutrition data unavailable")
+    # Use provided nutrition info if available
+    nutrients_fields = ["calories", "protein", "fat", "carbs", "fiber", "sugar", "sodium"]
+    for field in nutrients_fields:
+        if getattr(entry, field) is None:
+            # If any field is missing, fetch nutrition from API
+            if entry.food_name:
+                nutrients = get_nutrition(entry.food_name, entry.quantity or 1)
+                if not nutrients:
+                    raise HTTPException(status_code=404, detail="Food not found or nutrition data unavailable")
+                for key, value in nutrients.items():
+                    setattr(entry, key, round(value, 1))
+            else:
+                raise HTTPException(status_code=400, detail="Cannot add food without nutrition info")
 
-        # Populate entry with fetched nutrients
-        for key, value in nutrients.items():
-            setattr(entry, key, round(value, 1))
+    # Determine multiplier
+    if entry.unit_type == "grams" and entry.serving_size:
+        multiplier = (entry.quantity / entry.serving_size)
+    elif entry.unit_type == "units":
+        multiplier = entry.quantity
+    else:
+        multiplier = entry.quantity  # default
+
+# Scale all numeric nutrient fields
+    nutrient_fields = [
+        "calories", "protein", "fat", "carbs", "fiber", "sugar", "sodium",
+        "vitamin_a", "vitamin_c", "vitamin_d", "vitamin_e", "vitamin_k",
+        "vitamin_b1", "vitamin_b2", "vitamin_b3", "vitamin_b6", "vitamin_b12",
+        "folate", "calcium", "iron", "magnesium", "phosphorus", "potassium", "zinc"
+    ]
+    for field in nutrient_fields:
+        value = getattr(entry, field)
+        if value is not None:
+            setattr(entry, field, round(value * multiplier, 2))
 
     # Default date to today if missing
     if entry.date is None:
@@ -123,10 +105,8 @@ def add_food_to_diary(entry: DiaryEntryCreate):
 
     # Save to DB
     from app.database import save_diary_entry
-    if entry_data.get("calories") is None:
-        raise HTTPException(status_code=400, detail="Cannot add food without calories")
-
     entry_id = save_diary_entry(entry_data)
     entry_data["id"] = entry_id
 
     return {"entry": entry_data, "message": "Food added to diary successfully"}
+

@@ -88,7 +88,7 @@ export const AddFood = () => {
         const gramValue = parseInt(grams) || 0;
         quantity = Math.max(1, gramValue) / (selectedFood.serving_size || 100);
       }
-      const entry = await apiService.addFoodToDiary(selectedFood, selectedMealType, quantity);
+      const entry = await apiService.addFoodToDiary(selectedFood, selectedMealType, quantity, quantityType);
       if (entry) {
         toast({
           title: "Food Added",

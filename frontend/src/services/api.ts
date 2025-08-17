@@ -278,7 +278,7 @@ class ApiService {
     }
   }
 
-  async addFoodToDiary(food: FoodItem, mealType: string = 'snack', quantity: number = 1): Promise<DiaryEntry | null> {
+  async addFoodToDiary(food: FoodItem, mealType: string = 'snack', quantity: number = 1, unit_type: 'grams' | 'units' = 'grams'): Promise<DiaryEntry | null> {
     try {
       console.log('Adding food to diary:', { food_id: food.id, meal_type: mealType, quantity });
       console.log('API URL:', `${API_BASE_URL}/diary/add`);
@@ -291,6 +291,7 @@ class ApiService {
 
         body: JSON.stringify({
           food_id: food.id,
+          food_name: food.name,
           meal_type: mealType,
           quantity: quantity
         }),

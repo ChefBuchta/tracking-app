@@ -3,7 +3,7 @@ from fastapi import APIRouter, Query
 import requests
 import os
 from dotenv import load_dotenv
-
+from routes.nutrionix import get_nutrition
 load_dotenv()
 
 router = APIRouter()
@@ -20,15 +20,7 @@ BASE_HEADERS = {
 NATURAL_URL = "https://trackapi.nutritionix.com/v2/natural/nutrients"
 INSTANT_URL = "https://trackapi.nutritionix.com/v2/search/instant"
 
-def get_nutrition(food_name: str):
-    """Fetch real nutrition info for a single food item"""
-    body = {"query": food_name}
-    r = requests.post(NATURAL_URL, headers=BASE_HEADERS, json=body)
-    if r.status_code == 200:
-        data = r.json()
-        if data.get("foods"):
-            return data["foods"][0]
-    return None
+
 
 @router.get("/search")
 def search_food(query: str = Query(..., min_length=1)):
