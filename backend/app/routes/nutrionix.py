@@ -17,6 +17,7 @@ BASE_HEADERS = {
 }
 
 def get_nutrition(food_name: str, base_amount: str = "100g"):
+    
     """
     Always fetch nutrition for a fixed base amount from Nutritionix.
     base_amount: string like "100g" or "1 egg".
@@ -62,8 +63,8 @@ def get_nutrition(food_name: str, base_amount: str = "100g"):
             "potassium": food_data.get("nf_potassium_dv", 0),
             "zinc": food_data.get("nf_zinc_dv", 0),
         }
-        return nutrients, serving_size_g
+        return nutrients #, serving_size_g
 
     except Exception as e:
         print(f"Error fetching nutrition: {e}")
-        return None, None
+        return None #, None

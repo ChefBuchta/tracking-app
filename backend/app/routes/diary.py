@@ -7,7 +7,7 @@ import requests
 import os
 from typing import Optional
 from dotenv import load_dotenv
-from routes.nutrionix import get_nutrition
+from app.routes.nutrionix import get_nutrition
 load_dotenv()
 
 router = APIRouter()

@@ -35,6 +35,7 @@ export interface FoodItem {
   phosphorus?: number;
   potassium?: number;
   zinc?: number;
+  image?: string; // URL of the food image
 }
 
 export interface DiaryEntry {

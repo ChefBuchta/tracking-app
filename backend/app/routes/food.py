@@ -1,11 +1,11 @@
-# food.py
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 import requests
 import os
 from dotenv import load_dotenv
-from routes.nutrionix import get_nutrition
-load_dotenv()
 
+from app.routes.nutrionix import get_nutrition
+
+load_dotenv()
 router = APIRouter()
 
 NUTRITIONIX_APP_ID = os.getenv("NUTRITIONIX_APP_ID")
@@ -14,45 +14,32 @@ NUTRITIONIX_API_KEY = os.getenv("NUTRITIONIX_API_KEY")
 BASE_HEADERS = {
     "x-app-id": NUTRITIONIX_APP_ID,
     "x-app-key": NUTRITIONIX_API_KEY,
-    "Content-Type": "application/json",
 }
 
-NATURAL_URL = "https://trackapi.nutritionix.com/v2/natural/nutrients"
-INSTANT_URL = "https://trackapi.nutritionix.com/v2/search/instant"
-
-
-
+# 1) SEARCH
 @router.get("/search")
-def search_food(query: str = Query(..., min_length=1)):
-    # Step 1: Get search suggestions
-    r = requests.get(INSTANT_URL, headers=BASE_HEADERS, params={"query": query})
-    if r.status_code != 200:
-        return {"error": "Failed to fetch data"}
-
+def search_food(query: str = Query(..., description="Food name to search")):
+    url = "https://trackapi.nutritionix.com/v2/search/instant"
+    params = {"query": query, "detailed": False}
+    r = requests.get(url, headers=BASE_HEADERS, params=params)
+    r.raise_for_status()
     data = r.json()
-    common_foods = data.get("common", [])
 
-    # Step 2: Sort so exact match comes first
-    common_foods.sort(key=lambda x: 0 if x.get("food_name", "").lower() == query.lower() else 1)
-
+    # Return simplified results
     results = []
-    for item in common_foods:
-        name = item.get("food_name")
-        photo = item.get("photo", {}).get("thumb")
-        
-        # Step 3: Get real nutrition
-        nutrition = get_nutrition(name)
-        if nutrition:
-            results.append({
-                "id": name,
-                "name": name.title(),
-                "photo": photo,
-                "calories": nutrition.get("nf_calories", 0),
-                "protein": nutrition.get("nf_protein", 0),
-                "fat": nutrition.get("nf_total_fat", 0),
-                "carbs": nutrition.get("nf_total_carbohydrate", 0),
-                "fiber": nutrition.get("nf_dietary_fiber", 0),
-                "sugar": nutrition.get("nf_sugars", 0),
-                "sodium": nutrition.get("nf_sodium", 0),
-            })
-    return results
+    for item in data.get("common", []):
+        results.append({
+            "name": item.get("food_name", "").title(),
+            "image": item.get("photo", {}).get("thumb", ""),
+            "serving_unit": item.get("serving_unit", "g"),
+            "serving_size": item.get("serving_qty", 100),
+        })
+    return {"results": results}
+
+# 2) DETAILS
+@router.get("/details")
+def food_details(name: str = Query(..., description="Food name to fetch nutrition for")):
+    nutrition = get_nutrition(name, 1)
+    if not nutrition:
+        raise HTTPException(status_code=404, detail="Nutrition info not found")
+    return {"food_name": name.title(), **nutrition}
