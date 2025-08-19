@@ -174,18 +174,36 @@ class ApiService {
     }
   }
 
-  async searchFood(query: string): Promise<FoodItem[]> {
+async searchFood(query: string): Promise<FoodItem[]> {
   try {
     const response = await this.fetchWithErrorHandling(
       `${API_BASE_URL}/api/search?query=${encodeURIComponent(query)}`
     );
-    if (!Array.isArray(response)) return [];
-    return response.map(normalizeFood); // <-- normalize each food
+
+    const foods = Array.isArray(response.results) ? response.results : [];
+
+    // Fetch nutrition details for each food
+    const detailedFoods = await Promise.all(
+      foods.map(async (f: any) => {
+        try {
+          const details = await this.fetchWithErrorHandling(
+            `${API_BASE_URL}/api/details?query=${encodeURIComponent(f.name)}`
+          );
+          return normalizeFood({ ...f, ...details });
+        } catch (err) {
+          console.error("Failed to fetch details for", f.name, err);
+          return normalizeFood(f); // fallback (just name + serving)
+        }
+      })
+    );
+
+    return detailedFoods.filter(Boolean) as FoodItem[];
   } catch (error) {
-    console.error('Error searching food:', error);
+    console.error("Error searching food:", error);
     return this.getMockFoodData(query).map(normalizeFood);
-    }
   }
+}
+
 
 
   async getFoodById(foodId: string): Promise<FoodItem | null> {

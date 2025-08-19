@@ -27,13 +27,26 @@ def search_food(query: str = Query(..., description="Food name to search")):
 
     # Return simplified results
     results = []
-    for item in data.get("common", []):
-        results.append({
-            "name": item.get("food_name", "").title(),
-            "image": item.get("photo", {}).get("thumb", ""),
-            "serving_unit": item.get("serving_unit", "g"),
-            "serving_size": item.get("serving_qty", 100),
-        })
+    for item in data.get("common", [])[:5]:  # limit to top 5 results
+        food_name = item.get("food_name", "")
+        
+        # Step 2: Lookup macros
+        nutri_url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
+        nutri_res = requests.post(nutri_url, headers=BASE_HEADERS, json={"query": food_name})
+        nutri_res.raise_for_status()
+        nutri_data = nutri_res.json()
+
+        if nutri_data.get("foods"):
+            f = nutri_data["foods"][0]
+            results.append({
+                "name": f.get("food_name", "").title(),
+                "serving_unit": f.get("serving_unit", "g"),
+                "serving_size": f.get("serving_qty", 100),
+                "calories": f.get("nf_calories", 0),
+                "protein": f.get("nf_protein", 0),
+                "fat": f.get("nf_total_fat", 0),
+                "carbs": f.get("nf_total_carbohydrate", 0),
+            })
     return {"results": results}
 
 # 2) DETAILS

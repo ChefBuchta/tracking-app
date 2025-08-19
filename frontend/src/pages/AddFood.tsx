@@ -38,6 +38,7 @@ export const AddFood = () => {
   }, []);
 
   const handleSearch = async () => {
+    
     if (!searchTerm.trim()) return;
     setIsSearching(true);
     try {
