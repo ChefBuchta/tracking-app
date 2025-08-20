@@ -1,35 +1,26 @@
-#This is diary.py
-#This file contains the API routes for the food diary
+# app/routes/diary.py
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
-import requests
-import os
 from typing import Optional
 from dotenv import load_dotenv
 from app.routes.nutrionix import get_nutrition
-load_dotenv()
 
+load_dotenv()
 router = APIRouter()
 
-NUTRITIONIX_APP_ID = os.getenv("NUTRITIONIX_APP_ID")
-NUTRITIONIX_API_KEY = os.getenv("NUTRITIONIX_API_KEY")
-
-BASE_HEADERS = {
-    "x-app-id": NUTRITIONIX_APP_ID,
-    "x-app-key": NUTRITIONIX_API_KEY,
-    "Content-Type": "application/json"
-}
 
 # ----------------- Models -----------------
 class DiaryEntryCreate(BaseModel):
     food_id: str
     food_name: Optional[str] = None
     meal_type: str
-    quantity: float
-    unit_type: Optional[str] = "grams"
+    quantity: float                     # user input (grams or units)
+    unit_type: Optional[str] = "grams"  # "grams" or "units"
     serving_size: Optional[float] = None
     date: Optional[str] = None
+
+    # Nutrition fields (can be None if fetched later)
     calories: Optional[float] = None
     protein: Optional[float] = None
     fat: Optional[float] = None
@@ -55,40 +46,35 @@ class DiaryEntryCreate(BaseModel):
     potassium: Optional[float] = None
     zinc: Optional[float] = None
 
-# ----------------- Nutritionix Fetch -----------------
 
 # ----------------- Add Food Route -----------------
 @router.post("/add")
 def add_food_to_diary(entry: DiaryEntryCreate):
-    # Use provided nutrition info if available
-    nutrients_fields = ["calories", "protein", "fat", "carbs", "fiber", "sugar", "sodium"]
-    for field in nutrients_fields:
-        if getattr(entry, field) is None:
-            # If any field is missing, fetch nutrition from API
-            if entry.food_name:
-                nutrients = get_nutrition(entry.food_name, "100g")
-                if not nutrients:
-                    raise HTTPException(status_code=404, detail="Food not found or nutrition data unavailable")
-                for key, value in nutrients.items():
-                    if key == "serving_size":
-                        # store serving size in grams if available
-                        if value and value.get("weight_in_grams"):
-                            entry.serving_size = value.get("weight_in_grams")
-                        
-                    else:
-                        setattr(entry, key, round(value, 1))
-            else:
-                raise HTTPException(status_code=400, detail="Cannot add food without nutrition info")
+    # If nutrition info missing, fetch from Nutritionix
+    if any(getattr(entry, f) is None for f in ["calories", "protein", "fat", "carbs"]):
+        if not entry.food_name:
+            raise HTTPException(status_code=400, detail="Food name required when nutrition data missing")
 
-    # Determine multiplier
-    if entry.unit_type == "grams" and entry.serving_size:
-        multiplier = entry.quantity / entry.serving_size
-    elif entry.unit_type == "units":
-        multiplier = entry.quantity
+        nutrients = get_nutrition(entry.food_name, "100g")  # always fetch per 100g
+        if not nutrients:
+            raise HTTPException(status_code=404, detail="Food not found or nutrition data unavailable")
+
+        # Fill entry fields with baseline (per 100g) values
+        for key, value in nutrients.items():
+            setattr(entry, key, round(value, 2))
+
+        # Force serving size standardization to grams
+        entry.serving_size = 100
+        entry.unit_type = "grams"
+
+    # ----------------- Scaling -----------------
+    if entry.unit_type == "grams":
+        multiplier = entry.quantity / 100  # because baseline is per 100g
+    elif entry.unit_type == "units" and entry.serving_size:
+        multiplier = (entry.quantity * entry.serving_size) / 100
     else:
-        multiplier = entry.quantity / 100  # default
+        multiplier = entry.quantity / 100
 
-# Scale all numeric nutrient fields
     nutrient_fields = [
         "calories", "protein", "fat", "carbs", "fiber", "sugar", "sodium",
         "vitamin_a", "vitamin_c", "vitamin_d", "vitamin_e", "vitamin_k",
@@ -100,11 +86,10 @@ def add_food_to_diary(entry: DiaryEntryCreate):
         if value is not None:
             setattr(entry, field, round(value * multiplier, 2))
 
-    # Default date to today if missing
+    # ----------------- Defaults -----------------
     if entry.date is None:
         entry.date = datetime.now().strftime("%Y-%m-%d")
 
-    # Prepare data for DB
     entry_data = entry.dict()
     entry_data["food_name"] = entry.food_name.title() if entry.food_name else "Unknown Food"
     entry_data["created_at"] = datetime.now().isoformat()
@@ -115,4 +100,3 @@ def add_food_to_diary(entry: DiaryEntryCreate):
     entry_data["id"] = entry_id
 
     return {"entry": entry_data, "message": "Food added to diary successfully"}
-
