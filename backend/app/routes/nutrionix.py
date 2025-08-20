@@ -66,6 +66,11 @@ def get_nutrition(food_name: str, base_amount: str = "100g"):
             "zinc": food_data.get("nf_zinc_mg", 0),
         }
 
+        nutrients["serving_size"] = {
+        "qty": food_data.get("serving_qty"),             # e.g. 1
+        "unit": food_data.get("serving_unit"),           # e.g. "egg"
+        "weight_in_grams": food_data.get("serving_weight_grams") # e.g. 55
+    }
         return nutrients
 
     except Exception as e:

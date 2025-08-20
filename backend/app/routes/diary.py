@@ -66,21 +66,27 @@ def add_food_to_diary(entry: DiaryEntryCreate):
         if getattr(entry, field) is None:
             # If any field is missing, fetch nutrition from API
             if entry.food_name:
-                nutrients = get_nutrition(entry.food_name, entry.quantity or 1)
+                nutrients = get_nutrition(entry.food_name, "100g")
                 if not nutrients:
                     raise HTTPException(status_code=404, detail="Food not found or nutrition data unavailable")
                 for key, value in nutrients.items():
-                    setattr(entry, key, round(value, 1))
+                    if key == "serving_size":
+                        # store serving size in grams if available
+                        if value and value.get("weight_in_grams"):
+                            entry.serving_size = value.get("weight_in_grams")
+                        
+                    else:
+                        setattr(entry, key, round(value, 1))
             else:
                 raise HTTPException(status_code=400, detail="Cannot add food without nutrition info")
 
     # Determine multiplier
     if entry.unit_type == "grams" and entry.serving_size:
-        multiplier = (entry.quantity / entry.serving_size)
+        multiplier = entry.quantity / entry.serving_size
     elif entry.unit_type == "units":
         multiplier = entry.quantity
     else:
-        multiplier = entry.quantity  # default
+        multiplier = entry.quantity / 100  # default
 
 # Scale all numeric nutrient fields
     nutrient_fields = [
