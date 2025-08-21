@@ -55,23 +55,35 @@ def add_food_to_diary(entry: DiaryEntryCreate):
         if not entry.food_name:
             raise HTTPException(status_code=400, detail="Food name required when nutrition data missing")
 
-        nutrients = get_nutrition(entry.food_name, "100g")  # always fetch per 100g
+        # Decide baseline depending on unit type
+        if entry.unit_type == "units":
+            nutrients = get_nutrition(entry.food_name, "1 serving")  
+        else:
+            nutrients = get_nutrition(entry.food_name, "100g")
+
         if not nutrients:
             raise HTTPException(status_code=404, detail="Food not found or nutrition data unavailable")
 
-        # Fill entry fields with baseline (per 100g) values
+        # Fill entry fields with baseline values
         for key, value in nutrients.items():
-            setattr(entry, key, round(value, 2))
+            if isinstance(value, (int, float)):
+                setattr(entry, key, round(value, 2))
+            else:
+                setattr(entry, key, value)
 
-        # Force serving size standardization to grams
-        entry.serving_size = 100
-        entry.unit_type = "grams"
+        # Keep unit context correct
+        if entry.unit_type == "units":
+            entry.serving_size = nutrients.get("serving_weight_grams", 100)  # e.g. ~50g per egg
+            entry.unit_type = nutrients.get("serving_unit", "unit")         # fallback "unit"
+        else:
+            entry.serving_size = 100
+            entry.unit_type = "grams"
 
     # ----------------- Scaling -----------------
     if entry.unit_type == "grams":
-        multiplier = entry.quantity / 100  # because baseline is per 100g
-    elif entry.unit_type == "units" and entry.serving_size:
-        multiplier = (entry.quantity * entry.serving_size) / 100
+        multiplier = entry.quantity / 100  # baseline per 100g
+    elif entry.unit_type == "unit" and entry.serving_size:
+        multiplier = entry.quantity  # baseline already per 1 unit
     else:
         multiplier = entry.quantity / 100
 

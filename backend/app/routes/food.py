@@ -41,7 +41,8 @@ def search_food(query: str = Query(..., description="Food name to search")):
             results.append({
                 "name": f.get("food_name", "").title(),
                 "serving_unit": f.get("serving_unit", "g"),
-                "serving_size": f.get("serving_qty", 100),
+                "serving_size": f.get("serving_qty", 1),
+                "serving_weight_grams": f.get("serving_weight_grams", 100),
                 "calories": f.get("nf_calories", 0),
                 "protein": f.get("nf_protein", 0),
                 "fat": f.get("nf_total_fat", 0),

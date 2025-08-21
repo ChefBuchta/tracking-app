@@ -11,6 +11,9 @@ interface FoodCardProps {
   carbs: number;
   quantity?: number;
   mealType?: string;
+  serving_size?: number;          // number of units (e.g. 1)
+  serving_unit?: string;          // e.g. "cup", "item"
+  serving_weight_grams?: number;  // actual grams equivalent
   onAdd?: () => void;
   onRemove?: () => void;
   showActions?: boolean;
@@ -26,6 +29,9 @@ export const FoodCard = ({
   carbs, 
   quantity = 1,
   mealType,
+  serving_size,
+  serving_unit,
+  serving_weight_grams,
   onAdd, 
   onRemove,
   showActions = true,
@@ -57,6 +63,12 @@ export const FoodCard = ({
             <span>{calories} kcal</span>
             {quantity !== 1 && (
               <span>• {quantity}x</span>
+            )}
+            {/* ✅ Serving info */}
+            {serving_size && serving_unit && serving_weight_grams && (
+              <span>
+                {serving_size} {serving_unit} ≈ {Math.round(serving_weight_grams)} g
+              </span>
             )}
           </div>
         </div>
