@@ -1,3 +1,6 @@
+// FoodCard.tsx
+// This file defines the FoodCard component, which displays nutritional information about a food item.
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus, Info, Trash2 } from "lucide-react";

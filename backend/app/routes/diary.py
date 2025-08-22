@@ -57,9 +57,12 @@ def add_food_to_diary(entry: DiaryEntryCreate):
 
         # Decide baseline depending on unit type
         if entry.unit_type == "units":
-            nutrients = get_nutrition(entry.food_name, "1 serving")  
+            nutrients = get_nutrition(entry.food_name, "1 serving") 
+            entry.serving_size = nutrients.get("serving_weight_grams", None)  # grams per unit if available 
+            print("1. Serving size:", entry.serving_size, "Unit type:", entry.unit_type)
         else:
             nutrients = get_nutrition(entry.food_name, "100g")
+            entry.serving_size = 100
 
         if not nutrients:
             raise HTTPException(status_code=404, detail="Food not found or nutrition data unavailable")
@@ -75,6 +78,7 @@ def add_food_to_diary(entry: DiaryEntryCreate):
         if entry.unit_type == "units":
             entry.serving_size = nutrients.get("serving_weight_grams", 100)  # e.g. ~50g per egg
             entry.unit_type = nutrients.get("serving_unit", "unit")         # fallback "unit"
+            print("2. Serving size:", entry.serving_size, "Unit type:", entry.unit_type)
         else:
             entry.serving_size = 100
             entry.unit_type = "grams"
@@ -84,8 +88,9 @@ def add_food_to_diary(entry: DiaryEntryCreate):
         multiplier = entry.quantity / 100  # baseline per 100g
     elif entry.unit_type == "unit" and entry.serving_size:
         multiplier = entry.quantity  # baseline already per 1 unit
+        print("3. Serving size:", entry.serving_size, "Unit type:", entry.unit_type)
     else:
-        multiplier = entry.quantity / 100
+        raise HTTPException(status_code=400, detail="Invalid unit type or missing serving size")
 
     nutrient_fields = [
         "calories", "protein", "fat", "carbs", "fiber", "sugar", "sodium",

@@ -300,7 +300,7 @@ async searchFood(query: string): Promise<FoodItem[]> {
 
   async addFoodToDiary(food: FoodItem, mealType: string = 'snack', quantity: number = 1, unit_type: 'grams' | 'units' = 'grams'): Promise<DiaryEntry | null> {
     try {
-      console.log('Adding food to diary:', { food_id: food.id, meal_type: mealType, quantity });
+      console.log('Adding food to diary:', { food_id: food.id, meal_type: mealType, quantity, unit_type });
       console.log('API URL:', `${API_BASE_URL}/diary/add`);
       
       const response = await this.fetchWithErrorHandling(`${API_BASE_URL}/diary/add`, {
@@ -313,7 +313,8 @@ async searchFood(query: string): Promise<FoodItem[]> {
           food_id: food.id,
           food_name: food.name,
           meal_type: mealType,
-          quantity: quantity
+          quantity: quantity,
+          unit_type: unit_type,
         }),
       });
       
