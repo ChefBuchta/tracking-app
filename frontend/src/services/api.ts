@@ -298,37 +298,41 @@ async searchFood(query: string): Promise<FoodItem[]> {
     }
   }
 
-  async addFoodToDiary(food: FoodItem, mealType: string = 'snack', quantity: number = 1, unit_type: 'grams' | 'units' = 'grams'): Promise<DiaryEntry | null> {
-    try {
-      console.log('Adding food to diary:', { food_id: food.id, meal_type: mealType, quantity, unit_type });
-      console.log('API URL:', `${API_BASE_URL}/diary/add`);
-      
-      const response = await this.fetchWithErrorHandling(`${API_BASE_URL}/diary/add`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+async addFoodToDiary(
+  food: FoodItem,
+  mealType: string = 'snack',
+  quantity: number = 1,
+  unit_type: 'grams' | 'units' = 'grams'
+): Promise<DiaryEntry | null> {
+  try {
+    const body: any = {
+      food_id: food.id,
+      food_name: food.name,
+      meal_type: mealType,
+      quantity,
+      unit_type,
+    };
 
-        body: JSON.stringify({
-          food_id: food.id,
-          food_name: food.name,
-          meal_type: mealType,
-          quantity: quantity,
-          unit_type: unit_type,
-        }),
-      });
-      
-      console.log('API Response:', response);
-      return response.entry || null;
-    } catch (error) {
-      console.error('Error adding food to diary:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
-      return null;
-    }
+    // Only add serving fields if they exist
+    if (food.serving_size !== undefined) body.serving_size = food.serving_size;
+    if (food.serving_unit !== undefined) body.serving_unit = food.serving_unit;
+    if (food.serving_weight_grams !== undefined) body.serving_weight_grams = food.serving_weight_grams;
+
+    console.log("➡️ Frontend sending body:", body);
+
+    const response = await this.fetchWithErrorHandling(`${API_BASE_URL}/diary/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    console.log("✅ API Response:", response);
+    return response.entry || null;
+  } catch (error) {
+    console.error("❌ Error adding food to diary:", error);
+    return null;
   }
+}
 
   async getTodaysDiary(): Promise<DiaryEntry[]> {
     try {

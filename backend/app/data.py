@@ -293,7 +293,14 @@ def get_food_by_id(food_id: str):
     """Get a food item by its ID"""
     return next((food for food in foods if food["id"] == food_id), None)
 
-def add_diary_entry(food_id: str, meal_type: str, quantity: float, date: str = None):
+def add_diary_entry(
+    food_id: str,
+    meal_type: str,
+    quantity: float,
+    unit_type: str = "grams",
+    serving_weight_grams: float = None,
+    date: str = None
+):
     """Add a new diary entry"""
     global entry_id_counter
     
@@ -302,26 +309,37 @@ def add_diary_entry(food_id: str, meal_type: str, quantity: float, date: str = N
         return None
     
     from datetime import datetime
-    
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d")
     
+    # ✅ Determine actual weight in grams
+    if unit_type == "grams":
+        total_grams = quantity
+    elif unit_type == "units":
+        if serving_weight_grams is None:
+            serving_weight_grams = food.get("serving_weight_grams", 100)  # fallback
+        total_grams = quantity * serving_weight_grams
+    else:
+        total_grams = quantity  # fallback
+
+    # ✅ Calculate nutrition based on actual grams
     entry = {
         "id": str(entry_id_counter),
         "food_id": food_id,
         "food_name": food["name"],
         "meal_type": meal_type,
         "quantity": quantity,
+        "unit_type": unit_type,
+        "serving_weight_grams": serving_weight_grams,
         "date": date,
         "created_at": datetime.now().isoformat(),
-        # Calculate nutrition based on quantity (FIXED)
-        "calories": round(food["calories"] * quantity / 100, 1),
-        "protein": round(food["protein"] * quantity / 100, 1),
-        "fat": round(food["fat"] * quantity / 100, 1),
-        "carbs": round(food["carbs"] * quantity / 100, 1),
-        "fiber": round(food.get("fiber", 0) * quantity / 100, 1),
-        "sugar": round(food.get("sugar", 0) * quantity / 100, 1),
-        "sodium": round(food.get("sodium", 0) * quantity / 100, 1),
+        "calories": round(food["calories"] * total_grams / 100, 1),
+        "protein": round(food["protein"] * total_grams / 100, 1),
+        "fat": round(food["fat"] * total_grams / 100, 1),
+        "carbs": round(food["carbs"] * total_grams / 100, 1),
+        "fiber": round(food.get("fiber", 0) * total_grams / 100, 1),
+        "sugar": round(food.get("sugar", 0) * total_grams / 100, 1),
+        "sodium": round(food.get("sodium", 0) * total_grams / 100, 1),
     }
     
     diary_entries.append(entry)

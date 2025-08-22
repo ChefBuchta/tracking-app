@@ -50,48 +50,49 @@ class DiaryEntryCreate(BaseModel):
 # ----------------- Add Food Route -----------------
 @router.post("/add")
 def add_food_to_diary(entry: DiaryEntryCreate):
-    # If nutrition info missing, fetch from Nutritionix
+    # ----------------- Fetch Nutrition if Missing -----------------
     if any(getattr(entry, f) is None for f in ["calories", "protein", "fat", "carbs"]):
         if not entry.food_name:
             raise HTTPException(status_code=400, detail="Food name required when nutrition data missing")
 
-        # Decide baseline depending on unit type
+        print("📥 Incoming entry:", entry.dict())
+
+        # Always fetch baseline depending on unit type
         if entry.unit_type == "units":
-            nutrients = get_nutrition(entry.food_name, "1 serving") 
-            entry.serving_size = nutrients.get("serving_weight_grams", None)  # grams per unit if available 
-            print("1. Serving size:", entry.serving_size, "Unit type:", entry.unit_type)
+            # ✅ Always fetch for 1 unit baseline
+            nutrients = get_nutrition(f"1 {entry.food_name}", None)
+            if not nutrients:
+                raise HTTPException(status_code=404, detail="Food not found (units)")
+            entry.serving_size = nutrients.get("serving_weight_grams", None)  # grams per unit
+            entry.unit_type = nutrients.get("serving_unit", "unit")          # fallback "unit"
+            print("[UNITS] Serving size per unit:", entry.serving_size, "Unit type:", entry.unit_type)
         else:
-            nutrients = get_nutrition(entry.food_name, "100g")
+            # ✅ Always fetch for 100 g baseline
+            nutrients = get_nutrition(f"100g {entry.food_name}", None)
+            if not nutrients:
+                raise HTTPException(status_code=404, detail="Food not found (grams)")
             entry.serving_size = 100
+            entry.unit_type = "grams"
+            print("[GRAMS] Serving size baseline:", entry.serving_size, "Unit type:", entry.unit_type)
 
-        if not nutrients:
-            raise HTTPException(status_code=404, detail="Food not found or nutrition data unavailable")
-
-        # Fill entry fields with baseline values
+        # Fill entry with baseline nutrients
         for key, value in nutrients.items():
             if isinstance(value, (int, float)):
                 setattr(entry, key, round(value, 2))
             else:
                 setattr(entry, key, value)
 
-        # Keep unit context correct
-        if entry.unit_type == "units":
-            entry.serving_size = nutrients.get("serving_weight_grams", 100)  # e.g. ~50g per egg
-            entry.unit_type = nutrients.get("serving_unit", "unit")         # fallback "unit"
-            print("2. Serving size:", entry.serving_size, "Unit type:", entry.unit_type)
-        else:
-            entry.serving_size = 100
-            entry.unit_type = "grams"
-
     # ----------------- Scaling -----------------
     if entry.unit_type == "grams":
-        multiplier = entry.quantity / 100  # baseline per 100g
+        multiplier = entry.quantity / 100  # baseline was 100 g
+        print("[SCALING] Grams mode → quantity:", entry.quantity, "multiplier:", multiplier)
     elif entry.unit_type == "unit" and entry.serving_size:
-        multiplier = entry.quantity  # baseline already per 1 unit
-        print("3. Serving size:", entry.serving_size, "Unit type:", entry.unit_type)
+        multiplier = entry.quantity  # baseline was 1 unit
+        print("[SCALING] Units mode → quantity:", entry.quantity, "multiplier:", multiplier, "serving_size:", entry.serving_size)
     else:
         raise HTTPException(status_code=400, detail="Invalid unit type or missing serving size")
 
+    # Apply multiplier to nutrients
     nutrient_fields = [
         "calories", "protein", "fat", "carbs", "fiber", "sugar", "sodium",
         "vitamin_a", "vitamin_c", "vitamin_d", "vitamin_e", "vitamin_k",
@@ -115,5 +116,7 @@ def add_food_to_diary(entry: DiaryEntryCreate):
     from app.database import save_diary_entry
     entry_id = save_diary_entry(entry_data)
     entry_data["id"] = entry_id
+
+    print("[FINAL ENTRY]", entry_data)
 
     return {"entry": entry_data, "message": "Food added to diary successfully"}
